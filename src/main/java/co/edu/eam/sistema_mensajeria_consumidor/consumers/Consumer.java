@@ -1,5 +1,6 @@
 package co.edu.eam.sistema_mensajeria_consumidor.consumers;
 
+import co.edu.eam.sistema_mensajeria_consumidor.exceptions.BusinessException;
 import co.edu.eam.sistema_mensajeria_consumidor.model.entities.Category;
 import co.edu.eam.sistema_mensajeria_consumidor.model.entities.ProductStores;
 import co.edu.eam.sistema_mensajeria_consumidor.model.entities.Products;
@@ -9,6 +10,8 @@ import co.edu.eam.sistema_mensajeria_consumidor.services.CategoryService;
 import co.edu.eam.sistema_mensajeria_consumidor.services.ProductStoreService;
 import co.edu.eam.sistema_mensajeria_consumidor.services.ProductsService;
 import co.edu.eam.sistema_mensajeria_consumidor.services.StoreService;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,32 +34,42 @@ public class Consumer {
     private StoreService storeService;
 
     @RabbitListener(queues = "#{MiTienda.name}")
-    public void listenTiendaQueue(String message){
+    public void listenTiendaQueue(String message) {
 
-        //System.out.println(message);
-        String miArreglo[] = message.split(",");
-        Integer product_id = Integer.parseInt(miArreglo[0]);
-        String product_name = miArreglo[1];
-        String product_price = miArreglo[2];
-        String category = miArreglo[3];
-        Integer store_id = Integer.parseInt(miArreglo[5]);
-        String store_name = miArreglo[6];
+        try {
 
-        Category category1 = categoryService.findByName(category);
-        if (category1 == null){
-            category1 = new Category(category);
-            categoryService.create(category1);
-            category1 = categoryService.findByName(category);
+            JSONArray jsonArray = new JSONArray(message);
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                //System.out.println(message);
+                String miArreglo[] = jsonArray.get(i).toString().split(",");
+                Integer product_id = Integer.parseInt(miArreglo[0]);
+                String product_name = miArreglo[1];
+                String product_price = miArreglo[2];
+                String category = miArreglo[3];
+                Integer store_id = Integer.parseInt(miArreglo[5]);
+                String store_name = miArreglo[6];
+
+                Category category1 = categoryService.findByName(category);
+                if (category1 == null) {
+                    category1 = new Category(category);
+                    categoryService.create(category1);
+                    category1 = categoryService.findByName(category);
+                }
+
+                Products products = new Products(product_id, product_name, category1.getCategoryId());
+                productsService.create(products);
+
+                Store store = new Store(store_id, store_name);
+                storeService.create(store);
+
+                ProductStores productStores = new ProductStores(product_id, store_id, product_price);
+                productStoreService.create(productStores);
+
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (BusinessException businessException) {
         }
-
-        Products products = new Products(product_id, product_name, category1.getCategoryId());
-        productsService.create(products);
-
-        Store store = new Store(store_id, store_name);
-        storeService.create(store);
-
-        ProductStores productStores = new ProductStores(product_id, store_id, product_price);
-        productStoreService.create(productStores);
-
     }
 }
