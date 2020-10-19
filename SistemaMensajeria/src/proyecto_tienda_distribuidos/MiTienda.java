@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import com.google.gson.Gson;
 import com.rabbitmq.client.Channel;
 
 public class MiTienda {
@@ -29,22 +30,25 @@ public class MiTienda {
 
         for(int c = 0; c<chunks; c++){
             String nRegistro [] = Arrays.copyOfRange(registros,c*CHUNK_SIZE, (c + 1)*CHUNK_SIZE);
-            for (int i = 0; i < nRegistro.length; i++) {
-                System.out.println(nRegistro[i]);
-                try {
-                    canal.queueDeclare(NOMBRE_COLA, false, false, false, null);
-                    canal.basicPublish("", NOMBRE_COLA, null, nRegistro[i].getBytes());
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
+         
+            Gson gson = new Gson();
+            String json = gson.toJson(nRegistro);
+            try {
+				canal.queueDeclare(NOMBRE_COLA, false, false, false, null);
+				canal.basicPublish("", NOMBRE_COLA, null, json.getBytes());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+            
+
+            System.out.println("JSON:" +json);
         }
 	}
 	
 	public void leerMiArchivo(Channel channel) {
         BufferedReader bufferLectura = null;
-        String[]campos=new String[10000];;
+        String[]campos=new String[8000];
         try {
             bufferLectura = new BufferedReader(new FileReader(".\\src\\archivos\\RegistrosBase.csv"));
             String linea = bufferLectura.readLine();

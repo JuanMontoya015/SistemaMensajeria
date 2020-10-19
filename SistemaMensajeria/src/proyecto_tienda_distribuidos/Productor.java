@@ -19,7 +19,5 @@ public class Productor {
             MiTienda miTienda = new MiTienda();
             miTienda.leerMiArchivo(channel);
         }
-
-        }
-
+     }
 }
